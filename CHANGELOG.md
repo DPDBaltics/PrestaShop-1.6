@@ -4,3 +4,5 @@
 
 ###[1.1.9] - 2021-01-22
 - BO : Bugfix for zones, "Remove" button not working issue
+- BO : Show prestashop and module version as reference in order
+
