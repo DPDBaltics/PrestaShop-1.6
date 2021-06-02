@@ -47,7 +47,7 @@ class DPDBaltics extends CarrierModule
         $this->displayName = $this->l('DPDBaltics');
         $this->author = 'Invertus';
         $this->tab = 'shipping_logistics';
-        $this->version = '3.1.5';
+        $this->version = '3.1.6';
         $this->need_instance = 0;
         parent::__construct();
 
@@ -152,12 +152,27 @@ class DPDBaltics extends CarrierModule
             ]);
 
             $this->context->controller->addCSS($this->getPathUri() . 'views/css/front/pudo-shipment.css');
-            /** @var Invertus\dpdBaltics\Service\GoogleApiService $googleApiService */
-            $googleApiService = $this->getContainer(Invertus\dpdBaltics\Service\GoogleApiService::class);
-            $this->context->controller->addJS($googleApiService->getFormattedGoogleMapsUrl());
 
+            /** @var Invertus\dpdBaltics\Service\GoogleApiService $googleApiService */
+            if (Configuration::get(\Invertus\dpdBaltics\Config\Config::PICKUP_MAP)) {
+
+                $googleApiService = $this->getContainer(Invertus\dpdBaltics\Service\GoogleApiService::class);
+                $this->context->controller->addJS($googleApiService->getFormattedGoogleMapsUrl());
+            }
             $this->context->controller->addJS($this->getPathUri() . 'views/js/front/pudo.js');
             $this->context->controller->addJS($this->getPathUri() . 'views/js/front/pudo-search.js');
+        }
+
+        if ($currentController === 'order-opc') {
+            $this->context->controller->addJS($this->getPathUri() . 'views/js/front/order-opc.js');
+            Media::addJsDef([
+               'order_opc_errors' => [
+                   'pickup_point_error' => addslashes($this->l('Please select pickup point')),
+                   'invalid_phone_error' => addslashes($this->l('Invalid phone number')),
+                   'empty_phone_error' => addslashes($this->l('Please fill up phone number')),
+                   'invalid_delivery_time' => addslashes($this->l('Please select delivery time'))
+               ]
+            ]);
         }
     }
 
@@ -203,6 +218,7 @@ class DPDBaltics extends CarrierModule
                 return;
             }
         }
+
         if (!Tools::getValue('dpd-phone')) {
             $this->context->controller->errors[] =
                 $this->l('In order to use DPD Carrier you need to enter phone number');
@@ -364,15 +380,6 @@ class DPDBaltics extends CarrierModule
             }
         }
 
-        if ($serviceCarrier['is_pudo']) {
-            /** @var \Invertus\dpdBaltics\Service\Parcel\ParcelShopService $parcelShopsService */
-            $parcelShopsService = $this->getContainer()->get(\Invertus\dpdBaltics\Service\Parcel\ParcelShopService::class);
-            $shops = $parcelShopsService->getParcelShopsByCountryAndCity($countryCode, $deliveryAddress->city);
-            if (!$shops) {
-                return false;
-            }
-        }
-
         /** @var Invertus\dpdBaltics\Repository\PriceRuleRepository $priceRuleRepository */
         $priceRuleRepository = $this->getContainer()->get(Invertus\dpdBaltics\Repository\PriceRuleRepository::class);
 
@@ -471,6 +478,9 @@ class DPDBaltics extends CarrierModule
                     $selectedStreet = $deliveryAddress->address1;
                     $parcelShops = $parcelShopService->getParcelShopsByCountryAndCity($countryCode, $selectedCity);
                     $parcelShops = $parcelShopService->moveSelectedShopToFirst($parcelShops, $selectedStreet);
+                    if (!$parcelShops) {
+                        $selectedCity = null;
+                    }
                 }
             } catch (\Invertus\dpdBalticsApi\Exception\DPDBalticsAPIException $e) {
                 /** @var \Invertus\dpdBaltics\Service\Exception\ExceptionService $exceptionService */
@@ -525,7 +535,17 @@ class DPDBaltics extends CarrierModule
                 $selectedCity = $parcelShops[0]->getCity();
             }
             $streetList = $parcelShopRepo->getAllAddressesByCountryCodeAndCity($countryCode, $selectedCity);
-            $this->context->smarty->assign(
+            if (!$selectedCity) {
+                $tplVars = [
+                    'displayMessage' => true,
+                    'messages' => [$this->l("Your delivery address city is not in a list of pickup cities, please select closest pickup point city below manually")],
+                    'messageType_pudo' => 'danger'
+
+                ];
+                $this->context->smarty->assign($tplVars);
+            }
+
+                $this->context->smarty->assign(
                 [
                     'carrierId' => $carrier->id,
                     'pickUpMap' => Configuration::get(\Invertus\dpdBaltics\Config\Config::PICKUP_MAP),
@@ -541,6 +561,7 @@ class DPDBaltics extends CarrierModule
                     'show_shop_list' => Configuration::get(\Invertus\dpdBaltics\Config\Config::PARCEL_SHOP_DISPLAY),
                     'street_list' => $streetList,
                     'selected_street' => $selectedStreet,
+                    'current_controller' => Tools::getValue('controller'),
                 ]
             );
 

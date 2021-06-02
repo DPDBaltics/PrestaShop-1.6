@@ -23,8 +23,6 @@ var dpdMap = {};
 
 var infoWindow;
 
-
-
 $(document).ready(function () {
 
     if (typeof google !== 'undefined') {
@@ -313,6 +311,7 @@ $(document).ready(function () {
                 $(this).find('span').text($(this).data('select'));
             }
         });
+        isPudoPointSelected = true;
         if (typeof dpdMap[$idReference] !== 'undefined') {
             DPDinitMarkers(dpdMap[$idReference], infoWindow, false, false, $pudoId, true, false);
         }

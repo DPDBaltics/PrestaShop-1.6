@@ -43,3 +43,17 @@
 - Added shipping cost to dpd shipment
 - Translations added for carriers on webservice change
 - Map sequence loading improvements when prestashop js cache enabled
+
+## [3.1.6] - 2021-04-20
+### Changed
+- Ajax request to save phone number on order opc carrier, number validation added
+- Validations for empty phone number and invalid number
+- Validations when no pudo selected
+- Reload map on address country change
+- Bugfix for missing pudo points added
+- Fix for parcel update added, update all points
+- Pudo service weights changed, Portugal and other countries added
+- Show parcel terminal even tough delivery city is not correct
+- Carrier translation update
+- Vendor updated in zip folder, remove ports
+- Map bug fix when off map script loaded

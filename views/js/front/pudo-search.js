@@ -1,8 +1,20 @@
 $(document).ready(function () {
-    var city = $('select[name="dpd-city"]').val();
-    if (city) {
-        updateStreetSelect(city);
+    if ($('input[name="saved_pudo_id"]').val() === undefined) {
+        updateStreet();
+    } else {
+        isPudoPointSelected = true;
     }
+
+    $( document ).ajaxComplete(function( event, request, settings ) {
+        if (currentController !== 'order-opc') {
+            return;
+        }
+        var method = DPDgetUrlParam('method', settings.data)
+
+        if ( method === 'updateAddressesSelected') {
+            updateStreet();
+        }
+    });
 
     $(document).on('change', 'select[name="dpd-city"]', function () {
         var city = $('select[name="dpd-city"]').val();
@@ -20,6 +32,7 @@ $(document).ready(function () {
         var street = $('input[name="dpd-street"]').val();
         updateParcelBlock(city, street);
     });
+
 
     function updateStreetSelect(city) {
         $.ajax(dpdHookAjaxUrl, {
@@ -42,6 +55,7 @@ $(document).ready(function () {
                     $('select.chosen-select').chosen({inherit_select_classes: true});
                     var street = $('select[name="dpd-street"]').val();
                     saveSelectedStreet(city, street);
+                    isPudoPointSelected = true;
                 }
             },
             error: function (response) {
@@ -78,6 +92,7 @@ $(document).ready(function () {
                     $('.points-container').empty().append(response.template);
 
                     initMap(coordinates, true, response.selectedPudoId, false, $idReference);
+                    isPudoPointSelected = true;
                 }
             },
             error: function (response) {
@@ -130,4 +145,28 @@ $(document).ready(function () {
         var $messageContainer = parent.find('.dpd-message-container');
         $messageContainer.html('');
     }
+
+    function updateStreet() {
+        var city = $('select[name="dpd-city"]').val();
+        if (city) {
+            updateStreetSelect(city);
+        }
+    }
 });
+
+function DPDgetUrlParam(sParam, string)
+{
+    var sPageURL = decodeURIComponent(string),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
+    }
+}
+
